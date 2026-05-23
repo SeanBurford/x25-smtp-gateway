@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	localAddr   = flag.String("a", "", "local x.25 address (mandatory)")
+	localAddr   = flag.String("a", "999999999", "local x.25 address (mandatory)")
 	callData    = flag.String("P", "C0F70000", "protocol / call user data (hex)")
 	smtpListen  = flag.String("l", "", "SMTP listen address (e.g. 127.0.0.1:2525)")
 	smtpGateway = flag.String("g", "", "SMTP destination address for X.25 relay")
@@ -26,7 +26,7 @@ var (
 func main() {
 	flag.Parse()
 
-	if *localAddr == "" {
+	if *localAddr == "999999999" {
 		fmt.Println("Error: -a (local address) is mandatory")
 		flag.Usage()
 		os.Exit(1)
