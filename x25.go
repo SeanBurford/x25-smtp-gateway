@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -13,20 +12,20 @@ import (
 
 // Linux X.25 Constants
 const (
-	AF_X25         = 9
-	SOCK_SEQPACKET = 5
-	SOL_X25        = 262
-	SIOCX25GSUBSCRIP   = 0x89E0
-	SIOCX25SSUBSCRIP   = 0x89E1
-	SIOCX25GFACILITIES = 0x89E2
-	SIOCX25SFACILITIES = 0x89E3
+	AF_X25                = 9
+	SOCK_SEQPACKET        = 5
+	SOL_X25               = 262
+	SIOCX25GSUBSCRIP      = 0x89E0
+	SIOCX25SSUBSCRIP      = 0x89E1
+	SIOCX25GFACILITIES    = 0x89E2
+	SIOCX25SFACILITIES    = 0x89E3
 	SIOCX25GCALLUSERDATA  = 0x89E4
 	SIOCX25SCALLUSERDATA  = 0x89E5
 	SIOCX25GCAUSEDIAG     = 0x89E6
 	SIOCX25SCUDMATCHLEN   = 0x89E7
 	SIOCX25CALLACCPTAPPRV = 0x89E8
 	SIOCX25SENDCALLACCPT  = 0x89E9
-  SIOCX25GDTEFACILITIES = 0x89EA
+	SIOCX25GDTEFACILITIES = 0x89EA
 	SIOCX25SDTEFACILITIES = 0x89EB
 )
 
@@ -52,6 +51,7 @@ type X25Conn struct {
 	localAddr   string
 	remoteAddr  string
 	ReceivedCUD []byte
+	isInbound   bool
 }
 
 func (c *X25Conn) Read(b []byte) (n int, err error) {
@@ -88,22 +88,38 @@ func (c *X25Conn) SetDeadline(t time.Time) error      { return nil }
 func (c *X25Conn) SetReadDeadline(t time.Time) error  { return nil }
 func (c *X25Conn) SetWriteDeadline(t time.Time) error { return nil }
 
-func (c *X25Conn) GetCallingAddress() (string, error) {
-	// Standard Linux X.25 af_x25 does not support SIOCX25GDTEFACILITIES.
-	// We use raw getsockname() instead.
+func (c *X25Conn) readSockAddr(sysCall uintptr) (string, error) {
 	var sa sockaddrX25
 	salen := uint32(unsafe.Sizeof(sa))
-	_, _, errno := syscall.Syscall(syscall.SYS_GETSOCKNAME, uintptr(c.fd), uintptr(unsafe.Pointer(&sa)), uintptr(unsafe.Pointer(&salen)))
+	_, _, errno := syscall.Syscall(sysCall, uintptr(c.fd), uintptr(unsafe.Pointer(&sa)), uintptr(unsafe.Pointer(&salen)))
 	if errno != 0 {
 		return "", errno
 	}
-	// Address is a null-terminated string or space-padded? Usually null-terminated or just 16 bytes.
-	// We'll convert it to a string and trim nulls.
 	end := 0
 	for end < len(sa.Addr) && sa.Addr[end] != 0 {
 		end++
 	}
 	return string(sa.Addr[:end]), nil
+}
+
+// GetCallingAddress returns the address of the party that initiated the call.
+// On inbound sockets this is the remote peer (getpeername); on outbound sockets
+// it is the local address (getsockname).
+func (c *X25Conn) GetCallingAddress() (string, error) {
+	if c.isInbound {
+		return c.readSockAddr(syscall.SYS_GETPEERNAME)
+	}
+	return c.readSockAddr(syscall.SYS_GETSOCKNAME)
+}
+
+// GetCalledAddress returns the address that was called.
+// On inbound sockets this is the local address (getsockname); on outbound sockets
+// it is the remote peer (getpeername).
+func (c *X25Conn) GetCalledAddress() (string, error) {
+	if c.isInbound {
+		return c.readSockAddr(syscall.SYS_GETSOCKNAME)
+	}
+	return c.readSockAddr(syscall.SYS_GETPEERNAME)
 }
 
 func (c *X25Conn) SetOwner() error {
@@ -193,6 +209,7 @@ func (l *X25Listener) Accept() (net.Conn, error) {
 		localAddr:   l.localAddr,
 		remoteAddr:  remoteAddr,
 		ReceivedCUD: receivedCud,
+		isInbound:   true,
 	}
 	return xc, nil
 }

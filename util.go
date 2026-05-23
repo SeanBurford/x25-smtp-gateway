@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -34,7 +33,7 @@ var (
 
 func InitStats() {
 	stats.StartTime = time.Now()
-	
+
 	// Publish stats to expvar
 	expvar.Publish("varz", expvar.Func(func() interface{} {
 		statsMu.Lock()
@@ -57,7 +56,7 @@ func LogStats() {
 	stats.Goroutines = runtime.NumGoroutine()
 	b, _ := json.Marshal(stats)
 	statsMu.Unlock()
-	
+
 	log.Printf("STATS: %s", string(b))
 }
 

@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -52,9 +51,9 @@ func processEnvelope(reader *bufio.Reader, response io.Writer, connId, remoteAdd
 
 		parts := strings.Fields(line)
 		if len(parts) < 1 {
-				log.Printf("[%s] SMTP: Invalid command", connId)
-				writeSMTPResponse(response, "500 Syntax error, command unrecognized")
-				continue
+			log.Printf("[%s] SMTP: Invalid command", connId)
+			writeSMTPResponse(response, "500 Syntax error, command unrecognized")
+			continue
 		}
 		cmd := strings.ToUpper(parts[0])
 
@@ -67,7 +66,7 @@ func processEnvelope(reader *bufio.Reader, response io.Writer, connId, remoteAdd
 			writeSMTPResponse(response, "503 Illegal command sequence")
 		} else if cmd == "HELO" || cmd == "EHLO" {
 			parts := strings.Fields(line)
-			if len(parts) >= 2 { 
+			if len(parts) >= 2 {
 				ehloName = parts[1]
 			} else {
 				ehloName = remoteAddr
@@ -104,7 +103,7 @@ func processEnvelope(reader *bufio.Reader, response io.Writer, connId, remoteAdd
 		} else {
 			log.Printf("[%s] SMTP: Invalid command", connId)
 			writeSMTPResponse(response, "500 Syntax error, command unrecognized")
-			continue				
+			continue
 		}
 	}
 	return ehloName, from, to, nil

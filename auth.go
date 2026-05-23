@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -45,7 +44,7 @@ func IsAllowed(from string) bool {
 	defer authMu.Unlock()
 
 	if len(allowedAddrs) == 0 {
-		return true // Default allow if none specified? Or default deny? 
+		return true // Default allow if none specified? Or default deny?
 		// "Mandatory -A" was not said, but if provided it should be used.
 	}
 

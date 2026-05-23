@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -79,9 +78,9 @@ func TestProcessEnvelope_Quit(t *testing.T) {
 
 func TestProcessEnvelope_EdgeCases(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		wantErr  bool
+		name    string
+		input   string
+		wantErr bool
 	}{
 		{"Empty line", "\r\nQUIT\r\n", true},
 		{"MAIL before EHLO", "MAIL FROM:<s@t.com>\r\nQUIT\r\n", true},
@@ -159,7 +158,7 @@ func TestHandleRelay(t *testing.T) {
 
 	// Use net.Pipe for mock net.Conn
 	client, server := net.Pipe()
-	
+
 	// Create another pipe for the destination
 	destClient, destServer := net.Pipe()
 
@@ -186,19 +185,19 @@ func TestHandleRelay(t *testing.T) {
 		// Read EHLO
 		dsReader.ReadString('\n')
 		destServer.Write([]byte("250 Hello\r\n"))
-		
+
 		// Read MAIL FROM
 		dsReader.ReadString('\n')
 		destServer.Write([]byte("250 Sender OK\r\n"))
-		
+
 		// Read RCPT TO
 		dsReader.ReadString('\n')
 		destServer.Write([]byte("250 Recipient OK\r\n"))
-		
+
 		// Read DATA
 		dsReader.ReadString('\n')
 		destServer.Write([]byte("354 Start mail\r\n"))
-		
+
 		// Read Received header + Data
 		for {
 			line, _ := dsReader.ReadString('\n')
@@ -207,7 +206,7 @@ func TestHandleRelay(t *testing.T) {
 			}
 		}
 		destServer.Write([]byte("250 Message accepted\r\n"))
-		
+
 		// Read QUIT
 		dsReader.ReadString('\n')
 		destServer.Write([]byte("221 Goodbye\r\n"))
@@ -240,7 +239,7 @@ func TestHandleRelay(t *testing.T) {
 	client.Close()
 
 	// End of relay will close 'server'
-	
+
 	statsMu.Lock()
 	if stats.SMTPToX25.Success != 1 {
 		t.Errorf("expected 1 success in stats, got %d", stats.SMTPToX25.Success)
@@ -252,9 +251,9 @@ func TestHandleInboundSMTP_Greeting(t *testing.T) {
 	client, server := net.Pipe()
 	defer client.Close()
 	defer server.Close()
-	
+
 	go handleInboundSMTP(server, "12345", "C0F7")
-	
+
 	reader := bufio.NewReader(client)
 	line, err := reader.ReadString('\n')
 	if err != nil {
@@ -361,7 +360,7 @@ func TestRelayData_Timeout(t *testing.T) {
 
 	// Set a very short timeout
 	*recvTimeout = 1
-	
+
 	// No data sent on c1
 	reader := bufio.NewReader(c2)
 	var out bytes.Buffer
@@ -439,9 +438,11 @@ func TestRelayQUIT_Errors(t *testing.T) {
 }
 
 type errReader struct{}
+
 func (e *errReader) Read(p []byte) (n int, err error) { return 0, fmt.Errorf("read error") }
 
 type errWriter struct{}
+
 func (e *errWriter) Write(p []byte) (n int, err error) { return 0, fmt.Errorf("write error") }
 
 func TestWriteSMTPResponse(t *testing.T) {

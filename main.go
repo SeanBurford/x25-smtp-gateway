@@ -1,12 +1,11 @@
-
 package main
 
 import (
+	_ "expvar"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	_ "expvar"
 	"os"
 	"os/signal"
 	"syscall"
@@ -38,7 +37,7 @@ func main() {
 
 	// Initialize Stats
 	InitStats()
-	
+
 	// Start varz HTTP server if requested
 	if *varzAddr != "" {
 		log.Printf("Starting varz HTTP server on %s", *varzAddr)
