@@ -41,14 +41,6 @@ func InitStats() {
 		stats.Goroutines = runtime.NumGoroutine()
 		return stats
 	}))
-
-	// Periodic log of stats
-	go func() {
-		for {
-			time.Sleep(1 * time.Minute)
-			LogStats()
-		}
-	}()
 }
 
 func LogStats() {
