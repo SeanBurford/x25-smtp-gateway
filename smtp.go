@@ -197,6 +197,10 @@ func fqdnToX121(fqdn string) string {
 		addr = fmt.Sprintf("%s%s", addrs[part], addr)
 		part += 1
 	}
+	if len(addr) > 14 {
+		// Maximum address length exceeded.
+		return ""
+	}
 	return addr
 }
 
