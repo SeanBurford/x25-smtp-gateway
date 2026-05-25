@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -30,7 +31,6 @@ func StartSMTPToX25(listenAddr, localX25, callData string) {
 
 func processEnvelope(reader *bufio.Reader, response io.Writer, connId, remoteAddr string) (string, string, string, error) {
 	var from, to, ehloName string
-	// Envelope
 	for {
 		if *recvTimeout > 0 {
 			if conn, ok := response.(net.Conn); ok {
@@ -130,7 +130,6 @@ func readSMTPResponse(reader *bufio.Reader) (bool, string, error) {
 }
 
 func sendEnvelope(reader *bufio.Reader, response io.Writer, ehloName, from, to string) error {
-	// Greeting
 	success, resp, err := readSMTPResponse(reader)
 	if err != nil {
 		return fmt.Errorf("greeting read failed: %v", err)
@@ -190,6 +189,17 @@ func sendEnvelope(reader *bufio.Reader, response io.Writer, ehloName, from, to s
 	return nil
 }
 
+func fqdnToX121(fqdn string) string {
+	addr := ""
+	addrs := strings.Split(fqdn, ".")
+	part := 0
+	for part < len(addrs) && isNumeric(addrs[part]) {
+		addr = fmt.Sprintf("%s%s", addrs[part], addr)
+		part += 1
+	}
+	return addr
+}
+
 func handleInboundSMTP(conn net.Conn, localX25, callDataHex string) {
 	remoteAddr := conn.RemoteAddr().String()
 
@@ -203,8 +213,8 @@ func handleInboundSMTP(conn net.Conn, localX25, callDataHex string) {
 			if len(parts) < 2 {
 				return nil, "", fmt.Errorf("501 Invalid address")
 			}
-			addr := strings.Split(parts[1], ".")[0]
-			if !isNumeric(addr) {
+			addr := fqdnToX121(parts[1])
+			if addr == "" {
 				return nil, "", fmt.Errorf("501 Invalid address")
 			}
 			x25Conn, err := ConnectX25(addr, localX25, callDataHex, connId)
@@ -261,7 +271,6 @@ func handleRelay(src net.Conn, cfg RelayConfig) {
 		tcp.SetKeepAlive(true)
 	}
 
-	// Set receive timeout
 	if *recvTimeout > 0 {
 		src.SetReadDeadline(time.Now().Add(time.Duration(*recvTimeout) * time.Second))
 	}
@@ -426,22 +435,10 @@ func handleInboundX25(conn net.Conn, smtpGateway, expectedCudHex string) {
 	}
 
 	// Verify CUD
-	expectedCud, _ := hex.DecodeString(expectedCudHex)
-	if len(expectedCud) > 0 {
-		match := true
-		if len(receivedCUD) < len(expectedCud) {
-			match = false
-		} else {
-			for i := range expectedCud {
-				if receivedCUD[i] != expectedCud[i] {
-					match = false
-					break
-				}
-			}
-		}
-
-		if !match {
-			log.Printf("[%s] X.25: CUD mismatch. Expected %x, got %x", connId, expectedCud, receivedCUD)
+	if len(expectedCudHex) > 0 {
+		expectedCUD, _ := hex.DecodeString(expectedCudHex)
+		if bytes.Equal(receivedCUD, expectedCUD) == false {
+			log.Printf("[%s] X.25: CUD mismatch. Expected %x, got %x", connId, expectedCUD, receivedCUD)
 			writeSMTPResponse(conn, "521 Server Does Not Accept Mail")
 			conn.Close()
 			return

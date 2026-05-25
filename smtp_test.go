@@ -10,6 +10,33 @@ import (
 	"testing"
 )
 
+func TestFqdnToX121(t *testing.T) {
+	for fqdn, expected := range(map[string]string{
+		"": "",
+		".": "",
+		"example.com": "",
+		"1-day.example.com": "",
+		"day.1.example.com": "",
+		"0": "0",
+		"0.com": "0",
+		"0.example.com": "0",
+		"com.0": "",
+		"999999": "999999",
+		"999999.com": "999999",
+		"999999.example.com": "999999",
+		"456.123": "123456",
+		"456.123.com": "123456",
+		"456.123.example.com": "123456",
+		"456.123.example.7.com": "123456",
+		"4.5.6.1.2.3.example.com": "321654",
+	}){
+		addr := fqdnToX121(fqdn)
+		if addr != expected {
+			t.Errorf("expected %q, got %q", expected, addr)
+		}
+	}
+}
+
 func TestReadSMTPResponse(t *testing.T) {
 	tests := []struct {
 		input       string
